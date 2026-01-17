@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gamified Study Tracker – Mobile App UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --card-color: #f4f6f8;
+      --primary-color: #4CAF50;
+      --secondary-color: #2196F3;
+    }
+
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #ffffff;
+      --card-color: #1e1e1e;
+      --primary-color: #66bb6a;
+      --secondary-color: #64b5f6;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+    }
+
+    .app {
+      width: 100%;
+      max-width: none;
+      min-height: 100vh;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--primary-color);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .screen {
+      flex: 1;
+      padding: 15px;
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    body.dark input {
+      background: #2a2a2a;
+      color: white;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: var(--secondary-color);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: var(--card-color);
+      margin: 6px 0;
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stats {
+      background: var(--card-color);
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: gold;
+      color: black;
+      padding: 5px 10px;
+      margin: 4px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .leaderboard li {
+      justify-content: space-between;
+    }
+
+    .nav {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+
+    body.dark .nav {
+      border-top: 1px solid #333;
+    }
+
+    .nav button {
+      flex: 1;
+      border-radius: 0;
+      background: #f9f9f9;
+      color: #333;
+      border: none;
+      padding: 12px;
+    }
+
+    body.dark .nav button {
+      background: #1e1e1e;
+      color: white;
+    }
+
+    .nav button.active {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <span id="appTitle">Study Tracker</span>
+    <button class="toggle-btn" onclick="toggleTheme()">🌙 / ☀️</button>
+  </header>
+
+  <!-- LOGIN SCREEN -->
+  <div class="screen active" id="loginScreen">
+    <h3>Login / Register</h3>
+    <input type="text" id="usernameInput" placeholder="Enter username">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- DASHBOARD SCREEN -->
+  <div class="screen" id="dashboardScreen">
+    <h3>Welcome, <span id="userDisplay"></span></h3>
+
+    <input type="text" id="taskInput" placeholder="Enter study task">
+    <button onclick="addTask()">Add Task</button>
+
+    <ul id="taskList"></ul>
+
+    <div class="stats">
+      <p><strong>Points:</strong> <span id="points">0</span></p>
+      <p><strong>Level:</strong> <span id="level">1</span></p>
+      <p><strong>Streak:</strong> <span id="streak">0</span> days</p>
+      <p><strong>Badges:</strong></p>
+      <div id="badges"></div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD SCREEN -->
+  <div class="screen" id="leaderboardScreen">
+    <h3>Leaderboard</h3>
+    <ul class="leaderboard" id="leaderboardList"></ul>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <div class="nav" id="navBar" style="display:none;">
+    <button id="navDashboard" class="active" onclick="showScreen('dashboard')">Dashboard</button>
+    <button id="navLeaderboard" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<script>
+  let currentUser = null;
+  let users = JSON.parse(localStorage.getItem("users")) || {};
+
+  function saveUsers() {
+    localStorage.setItem("users", JSON.stringify(users));
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  }
+
+  function loadTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.body.classList.add("dark");
+    }
+  }
+
+  function login() {
+    const username = document.getElementById("usernameInput").value.trim();
+    if (!username) {
+      alert("Please enter a username.");
+      return;
+    }
+
+    if (!users[username]) {
+      users[username] = {
+        tasks: [],
+        points: 0,
+        completedTasks: 0,
+        streak: 0,
+        lastCompletedDate: null,
+        level: 1
+      };
+      saveUsers();
+    }
+
+    currentUser = username;
+    localStorage.setItem("currentUser", currentUser);
+    loadUserData();
+    showApp();
+  }
+
+  function logout() {
+    localStorage.removeItem("currentUser");
+    currentUser = null;
+    showLogin();
+  }
+
+  function showLogin() {
+    document.getElementById("loginScreen").classList.add("active");
+    document.getElementById("dashboardScreen").classList.remove("active");
+    document.getElementById("leaderboardScreen").classList.remove("active");
+    document.getElementById("navBar").style.display = "none";
+  }
+
+  function showApp() {
+    document.getElementById("loginScreen").classList.remove("active");
+    document.getElementById("dashboardScreen").classList.add("active");
+    document.getElementById("leaderboardScreen").classList.remove("active");
+    document.getElementById("navBar").style.display = "flex";
+    document.getElementById("userDisplay").textContent = currentUser;
+    renderTasks();
+    renderStats();
+    renderLeaderboard();
+  }
+
+  function showScreen(screen) {
+    document.getElementById("dashboardScreen").classList.remove("active");
+    document.getElementById("leaderboardScreen").classList.remove("active");
+
+    document.getElementById("navDashboard").classList.remove("active");
+    document.getElementById("navLeaderboard").classList.remove("active");
+
+    if (screen === "dashboard") {
+      document.getElementById("dashboardScreen").classList.add("active");
+      document.getElementById("navDashboard").classList.add("active");
+    } else if (screen === "leaderboard") {
+      document.getElementById("leaderboardScreen").classList.add("active");
+      document.getElementById("navLeaderboard").classList.add("active");
+      renderLeaderboard();
+    }
+  }
+
+  function loadUserData() {
+    const user = users[currentUser];
+    document.getElementById("points").textContent = user.points;
+    document.getElementById("level").textContent = user.level;
+    document.getElementById("streak").textContent = user.streak;
+  }
+
+  function addTask() {
+    const taskInput = document.getElementById("taskInput");
+    const taskText = taskInput.value.trim();
+    if (!taskText) return;
+
+    users[currentUser].tasks.push({ text: taskText });
+    saveUsers();
+    taskInput.value = "";
+    renderTasks();
+  }
+
+  function renderTasks() {
+    const taskList = document.getElementById("taskList");
+    taskList.innerHTML = "";
+
+    users[currentUser].tasks.forEach((task, index) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <span>${task.text}</span>
+        <button onclick="completeTask(${index})">Complete</button>
+      `;
+      taskList.appendChild(li);
+    });
+  }
+
+  function completeTask(index) {
+    const user = users[currentUser];
+    user.tasks.splice(index, 1);
+    user.completedTasks++;
+    user.points += 10;
+
+    updateStreak();
+    updateLevel();
+    saveUsers();
+
+    renderTasks();
+    renderStats();
+    renderLeaderboard();
+  }
+
+  function updateStreak() {
+    const user = users[currentUser];
+    const today = new Date().toDateString();
+
+    if (user.lastCompletedDate === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (user.lastCompletedDate === yesterday.toDateString()) {
+      user.streak++;
+    } else {
+      user.streak = 1;
+    }
+
+    user.lastCompletedDate = today;
+  }
+
+  function updateLevel() {
+    const user = users[currentUser];
+    user.level = Math.floor(user.points / 100) + 1;
+  }
+
+  function renderStats() {
+    const user = users[currentUser];
+    document.getElementById("points").textContent = user.points;
+    document.getElementById("level").textContent = user.level;
+    document.getElementById("streak").textContent = user.streak;
+    renderBadges();
+  }
+
+  function renderBadges() {
+    const badgeContainer = document.getElementById("badges");
+    badgeContainer.innerHTML = "";
+    const completed = users[currentUser].completedTasks;
+
+    if (completed >= 1) badgeContainer.innerHTML += '<span class="badge">Beginner</span>';
+    if (completed >= 5) badgeContainer.innerHTML += '<span class="badge">Achiever</span>';
+    if (completed >= 10) badgeContainer.innerHTML += '<span class="badge">Master</span>';
+    if (completed >= 25) badgeContainer.innerHTML += '<span class="badge">Legend</span>';
+  }
+
+  function renderLeaderboard() {
+    const leaderboardList = document.getElementById("leaderboardList");
+    leaderboardList.innerHTML = "";
+
+    const sortedUsers = Object.entries(users)
+      .sort((a, b) => b[1].points - a[1].points);
+
+    sortedUsers.forEach(([username, data], index) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>#${index + 1} ${username}</span><span>${data.points} pts</span>`;
+      leaderboardList.appendChild(li);
+    });
+  }
+
+  // Auto-login if session exists
+  const savedUser = localStorage.getItem("currentUser");
+  loadTheme();
+
+  if (savedUser && users[savedUser]) {
+    currentUser = savedUser;
+    showApp();
+  } else {
+    showLogin();
+  }
+</script>
+
+</body>
+</html>
